@@ -53,13 +53,16 @@ def calculate_correction(image_path):
 
     # Store for later use.
     results = {'mtx': mtx, 'dist': dist}
-    pickle.dump(results, 'results.p')
+    pickle_file_name = 'results.p'
+    f = open(pickle_file_name, 'wb')
+    pickle.dump(results, f)
+    print('pickle file saved to {}'.format(pickle_file_name))
 
 
 # Undistorts an image using the previously saved parameters
 def undistort(img, results):
+    return cv2.undistort(img, results['mtx'], results['dist'])
 
-    return cv2.undistort(img, results.mtx, results.dist)
 
 
 

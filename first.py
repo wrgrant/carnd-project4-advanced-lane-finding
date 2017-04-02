@@ -103,8 +103,7 @@ plt.show()
 
 
 
-# TODO create Lines() class
-# TODO Implement Reset() method that will start from scratch if multiple bad frames are found
+
 # TODO implement drawing routine
 # TODO keep track of lane curvature in real time
 # TODO keep track of distance from center of lane in real time
