@@ -5,6 +5,7 @@ import myplot
 import cv2
 import numpy as np
 import threshold
+import lane_find
 
 f = open('results.p', 'rb')
 results = pickle.load(f)
@@ -49,6 +50,7 @@ def apply_threshold(img):
 def process_images(img):
     img = apply_warp(img)
     img = apply_threshold(img)
+    lane_find.process(img)
     return img
 
 
