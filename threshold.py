@@ -72,34 +72,85 @@ def do_it(image):
     # Choose a Sobel kernel size
     ksize = 11 # Choose a larger odd number to smooth gradient measurements
 
-    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-    s_chan = hls[:, :, 2]
+    yel_bin = get_yellow_binary(image)
+    white_bin = get_white_binary(image)
+    combined = yel_bin | white_bin
 
-    thresh = (15, 255)
-    s_bin = np.zeros_like(s_chan)
-    s_bin[(s_chan > thresh[0]) & (s_chan <= thresh[1])] = 1
-
-    #s_blur = cv2.blur(s_chan, (2, 2))
-    #myplot.plot_double(s_chan, s_bin, 'orig', 'binary')
-    img = s_bin
-
-    # Apply each of the thresholding functions
-    gradx = abs_sobel_thresh(img, orient='x', sobel_kernel=ksize, thresh=(200, 255))
-    #grady = abs_sobel_thresh(img, orient='y', sobel_kernel=ksize, thresh=(0, 255))
-    mag_binary = mag_thresh(img, sobel_kernel=ksize, mag_thresh=(0, 100))
-    dir_binary = dir_threshold(img, sobel_kernel=ksize, thresh=(0, 80))
-
-    combined = np.zeros_like(dir_binary)
-    #combined[(gradx == 1) | ((mag_binary == 1) & (dir_binary == 1))] = 1
-    #combined[((mag_binary == 1) & (dir_binary == 1))] = 1
-    combined = gradx
-
+    #myplot.plot_double(image, combined, 'original image', 'yel_white image')
     #myplot.timed_plot_double(image, combined, 'original image', 'thresholded image')
+
     return combined
 
 
 
 
-# TODO implement drawing routine
-# TODO keep track of lane curvature in real time
-# TODO keep track of distance from center of lane in real time
+def get_white_binary(image):
+    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+    l_chan = hls[:, :, 1]
+    s_chan = hls[:, :, 2]
+
+    # White is basically high Lightness and low color Saturation
+    l_thresh = 200
+    l_mask = l_chan > l_thresh
+
+    s_thresh = 50
+    s_mask = s_chan < s_thresh
+
+    white_bin = np.zeros_like(l_chan)
+    white_bin[l_mask & s_mask] = 1
+
+    return white_bin
+
+
+
+
+def get_yellow_binary(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    h_chan = hsv[:, :, 0]
+    s_chan = hsv[:, :, 1]
+
+    # Define range for yellow in Hue channel. Remember these are 0-180 degrees.
+    h_thresh_low = 10
+    h_thresh_high = 26
+    h_mask = (h_chan > h_thresh_low) & (h_chan < h_thresh_high)
+
+    # Only want to look for high-saturation yellow though
+    s_thresh = 80
+    s_mask = s_chan > s_thresh
+
+    yellow_bin = np.zeros_like(h_chan)
+    yellow_bin[h_mask & s_mask] = 1
+
+    return yellow_bin
+
+
+
+
+def get_white_old(image):
+    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+
+    s_chan = hls[:, :, 2]
+
+    s_thresh = (15, 255)
+    s_bin = np.zeros_like(s_chan)
+    s_mask = (s_chan > s_thresh[0]) & (s_chan <= s_thresh[1])
+    return s_mask
+
+
+
+
+def get_gradient_mask(image, ksize):
+    # Choose a Sobel kernel size
+    ksize = 11 # Choose a larger odd number to smooth gradient measurements
+
+    # Apply each of the thresholding functions
+    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(200, 255))
+    #grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(0, 255))
+    mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(0, 100))
+    dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0, 80))
+
+    combined = np.zeros_like(dir_binary)
+    #combined[(gradx == 1) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+    #combined[((mag_binary == 1) & (dir_binary == 1))] = 1
+    combined = gradx
+    return combined
