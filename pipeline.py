@@ -49,14 +49,15 @@ def process_images(orig_img):
     img = threshold.do_it(img)
     img = lane_find.process(img)
     img = cv2.addWeighted(orig_img, 1, img, 0.3, 0)
+    img = lane_find.add_info_overlay(img)
     myplot.timed_plot(img)
     return img
 
 
 
 
-def do_it(output=''):
-    clip = VideoFileClip('challenge_corrected.mp4')
+def do_it(input, output):
+    clip = VideoFileClip(input)
     processed = clip.fl_image(process_images)
     processed.write_videofile(output, audio=False)
 
@@ -66,7 +67,7 @@ def do_it(output=''):
 # Algorithm...
 #undistort_movie()
 #load_frame_at_time(16)
-do_it(output='transformed.mp4')
+do_it(input='harder_challenge_video.mp4', output='pipeline_extra_challenge.mp4')
 
 
 # Perspective transform

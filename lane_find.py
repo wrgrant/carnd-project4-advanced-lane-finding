@@ -53,17 +53,13 @@ def process(in_img):
         find_lines_initial()
         fit_curves()
         # plot_window_find_initial()
+        # TODO add binary points to final output image.
     else:
         find_lines_update()
         fit_curves()
         # plot_line_find_update()
 
-    calculate_line_curvature()
-    calculate_center_offset()
-
     warp_back_to_original()
-    add_info_overlay()
-
 
     return un_warped
 
@@ -154,6 +150,9 @@ def find_lines_update():
     nonzero_y = np.array(nonzero[0])
     nonzero_x = np.array(nonzero[1])
 
+    left_fit = left_line_obj.get_fit()
+    right_fit = right_line_obj.get_fit()
+
     left_lane_idxs = ((nonzero_x > (left_fit[0] * (nonzero_y ** 2) + left_fit[1] * nonzero_y + left_fit[2] - margin)) & (
         nonzero_x < (left_fit[0] * (nonzero_y ** 2) + left_fit[1] * nonzero_y + left_fit[2] + margin)))
 
@@ -198,6 +197,9 @@ def plot_window_find_initial():
 
 def generate_plot_points():
     global ploty, left_fitx, right_fitx
+
+    left_fit = left_line_obj.get_fit()
+    right_fit = right_line_obj.get_fit()
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
@@ -244,38 +246,6 @@ def plot_line_find_update():
 
 
 
-def calculate_line_curvature():
-    generate_plot_points()
-    # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30/720 # meters per pixel in y dimension
-    xm_per_pix = 3.7/700 # meters per pixel in x dimension
-    y_eval = img.shape[0]
-
-    # We are taking the top-down perspective x points from the polynomial fit
-    # and applying this meters-per-pixel offset. So what I need here are
-    # the left and right X pixels from the top-down perspective.
-
-    # Fit new polynomials to x,y in original camera perspective.
-    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
-    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
-
-    # Calculate the new radii of curvature
-    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
-    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
-    # Now our radius of curvature is in meters
-    print(left_curverad, 'm', right_curverad, 'm')
-    # Example values: 632.1 m    626.2 m
-
-
-
-def calculate_center_offset():
-    # Find centerpoint of lane lines
-
-    # Compare to center point of image.
-    car_center = midpoint
-
-
-
 def warp_back_to_original():
     generate_plot_points()
     # Create an image to draw the lines on
@@ -300,10 +270,67 @@ def warp_back_to_original():
 
 
 
-def add_info_overlay():
-    # TODO how to overlay text in image?
+def add_info_overlay(img):
 
-    # TODO overlay radius of curvature
-    # TODO overlay center offset
-    pass
+    curvature = calculate_line_curvature()
+    offset = calculate_center_offset()
+
+    color = (255, 255, 255)
+    str = 'radius of curvature {:.2f}m'.format(curvature)
+    cv2.putText(img, str, (20, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+
+    str = 'center offset {:.2f}m'.format(offset)
+    cv2.putText(img, str, (20, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+
+    return img
+
+
+
+
+def calculate_line_curvature():
+    generate_plot_points()
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    y_eval = img.shape[0]
+
+    # We are taking the top-down perspective x points from the polynomial fit
+    # and applying this meters-per-pixel offset. So what I need here are
+    # the left and right X pixels from the top-down perspective.
+
+    # Fit new polynomials to x,y in original camera perspective.
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
+
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+    # Now our radius of curvature is in meters
+
+    left_line_obj.radius_of_curvature = left_curverad
+    right_line_obj.radius_of_curvature = right_curverad
+
+    return np.average([left_curverad, right_curverad])
+    #print(left_curverad, 'm', right_curverad, 'm')
+    # Example values: 632.1 m    626.2 m
+
+
+
+
+def calculate_center_offset():
+    # Find centerpoint of lane lines
+    centerpoint = np.average([left_line_obj.get_x_pos(), right_line_obj.get_x_pos()])
+
+    # Compare to center point of image.
+    car_center = midpoint
+
+    # Offset in pixels
+    offset = centerpoint - midpoint
+
+    # Apply conversion factor to get offset in meters
+    xm_per_pix = 3.7 / 1300
+    return offset * xm_per_pix
+
+
+
 
