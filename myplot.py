@@ -44,3 +44,10 @@ def plot(img, title=''):
     plt.imshow(img)
     plt.title(title)
     plt.show()
+
+
+def timed_plot(img, title=''):
+    plt.imshow(img)
+    plt.show(block=False)
+    plt.pause(0.00001)
+    plt.close()

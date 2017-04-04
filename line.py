@@ -1,10 +1,11 @@
+import numpy as np
 
 
-
-class Line():
+class Line:
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
+        self.n_bad_frames = 0
         # x values of the last n fits of the line
         self.recent_xfitted = []
         #average x values of the fitted line over the last n iterations
@@ -23,3 +24,12 @@ class Line():
         self.allx = None
         #y values for detected line pixels
         self.ally = None
+
+
+
+    def update(self, x_pts, y_pts):
+
+        self.current_fit = np.polyfit(y_pts, x_pts, 2)
+
+
+

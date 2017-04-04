@@ -46,9 +46,10 @@ def load_frame_at_time(time):
 
 def process_images(orig_img):
     img = warp.warp_to_top_down(orig_img)
-    proc_img = threshold.do_it(img)
+    img = threshold.do_it(img)
     img = lane_find.process(img)
     img = cv2.addWeighted(orig_img, 1, img, 0.3, 0)
+    myplot.timed_plot(img)
     return img
 
 

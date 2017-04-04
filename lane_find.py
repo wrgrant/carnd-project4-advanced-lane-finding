@@ -17,8 +17,6 @@ out_img = None
 un_warped = None
 
 
-left_fit = None
-right_fit = None
 left_fit_x = None
 right_fit_x = None
 ploty = None
@@ -29,11 +27,11 @@ left_lane_idxs = None
 right_lane_idxs = None
 
 # Left and right line objects.
-left_line_obj = line.Line
-right_line_obj = line.Line
+left_line_obj = line.Line()
+right_line_obj = line.Line()
 
 
-n_frames = 1
+
 # Number of windows to use over height of image for moving window lane finding.
 n_windows = 9
 # Set the width of the windows +/- margin
@@ -48,17 +46,17 @@ is_reset = True
 
 def process(in_img):
     global img
-    global n_frames
+
     img = in_img
 
     if is_reset:
         find_lines_initial()
         fit_curves()
-        plot_window_find_initial()
+        # plot_window_find_initial()
     else:
         find_lines_update()
         fit_curves()
-        plot_line_find_update()
+        # plot_line_find_update()
 
     calculate_line_curvature()
     calculate_center_offset()
@@ -66,7 +64,7 @@ def process(in_img):
     warp_back_to_original()
     add_info_overlay()
 
-    n_frames += 1
+
     return un_warped
 
 
@@ -149,6 +147,7 @@ def find_lines_initial():
 
 
 
+
 def find_lines_update():
     global nonzero_x, nonzero_y, left_lane_idxs, right_lane_idxs
     nonzero = img.nonzero()
@@ -166,17 +165,15 @@ def find_lines_update():
 
 
 def fit_curves():
-    # Extract left and right line pixel positions
+    # Extract left and right line pixel positions and feed into line objects
+
     leftx = nonzero_x[left_lane_idxs]
     lefty = nonzero_y[left_lane_idxs]
+    left_line_obj.update(leftx, lefty)
+
     rightx = nonzero_x[right_lane_idxs]
     righty = nonzero_y[right_lane_idxs]
-
-    global left_fit, right_fit
-    # Fit a second order polynomial to each
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
-
+    right_line_obj.update(rightx, righty)
 
 
 
@@ -248,6 +245,7 @@ def plot_line_find_update():
 
 
 def calculate_line_curvature():
+    generate_plot_points()
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30/720 # meters per pixel in y dimension
     xm_per_pix = 3.7/700 # meters per pixel in x dimension
@@ -279,6 +277,7 @@ def calculate_center_offset():
 
 
 def warp_back_to_original():
+    generate_plot_points()
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(img).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -295,8 +294,8 @@ def warp_back_to_original():
     # Warp the blank back to original camera perspective.
     un_warped = warp.warp_from_top_down(color_warp)
 
-    plt.imshow(un_warped)
-    plt.show()
+    # plt.imshow(un_warped)
+    # plt.show()
 
 
 
