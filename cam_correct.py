@@ -6,6 +6,8 @@ import argparse
 import pickle
 
 
+
+
 def calculate_correction(image_path):
 
     points_per_row = 9
@@ -47,7 +49,6 @@ def calculate_correction(image_path):
             #plt.imshow(img)
             #plt.show()
 
-
     # Now that all images have been calculated, calculate calibration constants.
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
@@ -57,6 +58,8 @@ def calculate_correction(image_path):
     f = open(pickle_file_name, 'wb')
     pickle.dump(results, f)
     print('pickle file saved to {}'.format(pickle_file_name))
+
+
 
 
 # Undistorts an image using the previously saved parameters

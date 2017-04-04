@@ -1,23 +1,49 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import warp
+import line
 
 
-# module variables
+
+
+# module variables -------------------
+
+# Incoming image  (warped to birds-eye and thresholded).
 img = None
+# Image for temporary visualization during development.
 out_img = None
+# Final outgoing image with the color fill over the
+un_warped = None
+
+
 left_fit = None
 right_fit = None
+left_fit_x = None
+right_fit_x = None
+ploty = None
+midpoint = None
+nonzero_x = None
+nonzero_y = None
+left_lane_idxs = None
+right_lane_idxs = None
+
+# Left and right line objects.
+left_line_obj = line.Line
+right_line_obj = line.Line
+
 
 n_frames = 1
+# Number of windows to use over height of image for moving window lane finding.
 n_windows = 9
-
-is_reset = True
-
 # Set the width of the windows +/- margin
 margin = 100
 # Set minimum number of pixels found to recenter window
 minpix = 50
+
+is_reset = True
+
+
 
 
 def process(in_img):
@@ -27,30 +53,43 @@ def process(in_img):
 
     if is_reset:
         find_lines_initial()
+        fit_curves()
         plot_window_find_initial()
     else:
         find_lines_update()
+        fit_curves()
         plot_line_find_update()
 
+    calculate_line_curvature()
+    calculate_center_offset()
+
+    warp_back_to_original()
+    add_info_overlay()
 
     n_frames += 1
+    return un_warped
 
 
 
 
+# noinspection PyTypeChecker
 def find_lines_initial():
     global img
     global out_img
     global n_windows
-    global nonzerox
-    global nonzeroy
+    global nonzero_x
+    global nonzero_y
+    global midpoint
 
     x_dim = img.shape[0]
     midpoint = np.int(x_dim / 2)
 
     histogram = np.sum(img[midpoint:,:], axis=0)
-    leftx_base = np.argmax(histogram[:midpoint])
-    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+
+    # Find the highest histogram count location for left and right halves of image.
+    leftx_bottom = np.argmax(histogram[:midpoint])
+    rightx_bottom = np.argmax(histogram[midpoint:]) + midpoint
+
     # plt.plot(histogram)
     # plt.show()
 
@@ -61,19 +100,19 @@ def find_lines_initial():
     window_height = np.int(img.shape[0] / n_windows)
     # Identify the x and y positions of all nonzero pixels in the image
     nonzero = img.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
+    nonzero_y = np.array(nonzero[0])
+    nonzero_x = np.array(nonzero[1])
 
-    # Current positions to be updated for each window
-    leftx_current = leftx_base
-    rightx_current = rightx_base
+    # Current window centers. To be updated for each window. Initialize with bottom centers
+    leftx_current = leftx_bottom
+    rightx_current = rightx_bottom
 
-    global left_lane_inds, right_lane_inds
+    global left_lane_idxs, right_lane_idxs
     # Create empty lists to receive left and right lane pixel indices
-    left_lane_inds = []
-    right_lane_inds = []
+    left_lane_idxs = []
+    right_lane_idxs = []
 
-    # Step through the windows one by one
+    # Step through the windows one by one...
     for window in range(n_windows):
         # Identify window boundaries in x and y (and right and left)
         win_y_low = img.shape[0] - (window + 1) * window_height
@@ -87,51 +126,66 @@ def find_lines_initial():
         cv2.rectangle(out_img, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (0, 255, 0), 2)
         cv2.rectangle(out_img, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (0, 255, 0), 2)
 
-        # Identify the nonzero pixels in x and y within the window
-        good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (
-                           nonzerox < win_xleft_high)).nonzero()[0]
-        good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (
-                            nonzerox < win_xright_high)).nonzero()[0]
+        # Within the windows, identify any nonzero pixels.
+        nonzero_left_idxs = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_xleft_low) & (
+            nonzero_x < win_xleft_high)).nonzero()[0]
+        nonzero_right_idxs = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_xright_low) & (
+            nonzero_x < win_xright_high)).nonzero()[0]
 
         # Append these indices to the lists
-        left_lane_inds.append(good_left_inds)
-        right_lane_inds.append(good_right_inds)
+        left_lane_idxs.append(nonzero_left_idxs)
+        right_lane_idxs.append(nonzero_right_idxs)
 
         # If you found > minpix pixels, center window on their mean position
-        if len(good_left_inds) > minpix:
-            leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
-        if len(good_right_inds) > minpix:
-            rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
+        if len(nonzero_left_idxs) > minpix:
+            leftx_current = np.int(np.mean(nonzero_x[nonzero_left_idxs]))
+        if len(nonzero_right_idxs) > minpix:
+            rightx_current = np.int(np.mean(nonzero_x[nonzero_right_idxs]))
 
     # Concatenate the arrays of indices
-    left_lane_inds = np.concatenate(left_lane_inds)
-    right_lane_inds = np.concatenate(right_lane_inds)
+    left_lane_idxs = np.concatenate(left_lane_idxs)
+    right_lane_idxs = np.concatenate(right_lane_idxs)
 
+
+
+
+def find_lines_update():
+    global nonzero_x, nonzero_y, left_lane_idxs, right_lane_idxs
+    nonzero = img.nonzero()
+    nonzero_y = np.array(nonzero[0])
+    nonzero_x = np.array(nonzero[1])
+
+    left_lane_idxs = ((nonzero_x > (left_fit[0] * (nonzero_y ** 2) + left_fit[1] * nonzero_y + left_fit[2] - margin)) & (
+        nonzero_x < (left_fit[0] * (nonzero_y ** 2) + left_fit[1] * nonzero_y + left_fit[2] + margin)))
+
+    right_lane_idxs = (
+        (nonzero_x > (right_fit[0] * (nonzero_y ** 2) + right_fit[1] * nonzero_y + right_fit[2] - margin)) & (
+            nonzero_x < (right_fit[0] * (nonzero_y ** 2) + right_fit[1] * nonzero_y + right_fit[2] + margin)))
+
+
+
+
+def fit_curves():
     # Extract left and right line pixel positions
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
+    leftx = nonzero_x[left_lane_idxs]
+    lefty = nonzero_y[left_lane_idxs]
+    rightx = nonzero_x[right_lane_idxs]
+    righty = nonzero_y[right_lane_idxs]
 
     global left_fit, right_fit
     # Fit a second order polynomial to each
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
-    global is_reset
-    is_reset = False
 
 
 
 
 def plot_window_find_initial():
-    # Generate x and y values for plotting
-    ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    generate_plot_points()
 
-    out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]    # Left =red
-    out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]  # Right=blue
+    out_img[nonzero_y[left_lane_idxs], nonzero_x[left_lane_idxs]] = [255, 0, 0]    # Left =red
+    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 0, 255]  # Right=blue
     plt.imshow(out_img)
     plt.plot(left_fitx, ploty, color='yellow')
     plt.plot(right_fitx, ploty, color='yellow')
@@ -145,44 +199,27 @@ def plot_window_find_initial():
 
 
 
-def find_lines_update():
-    global nonzerox, nonzeroy
-    nonzero = img.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
+def generate_plot_points():
+    global ploty, left_fitx, right_fitx
 
-    global left_lane_inds, right_lane_inds, left_fit, right_fit
-    left_lane_inds = ((nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - margin)) & (
-                       nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + margin)))
-
-    right_lane_inds = (
-                       (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - margin)) & (
-                        nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + margin)))
-
-    # Again, extract left and right line pixel positions
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
-    # Fit a second order polynomial to each
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
-
-
-
-
-def plot_line_find_update():
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
     left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
     right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
+
+
+
+def plot_line_find_update():
+    generate_plot_points()
+
     # Create an image to draw on and an image to show the selection window
+    global out_img
     out_img = np.dstack((img, img, img)) * 255
     window_img = np.zeros_like(out_img)
     # Color in left and right line pixels
-    out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-    out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+    out_img[nonzero_y[left_lane_idxs], nonzero_x[left_lane_idxs]] = [255, 0, 0]
+    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 0, 255]
 
     # Generate a polygon to illustrate the search window area
     # And recast the x and y points into usable format for cv2.fillPoly()
@@ -211,15 +248,18 @@ def plot_line_find_update():
 
 
 def calculate_line_curvature():
-    ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30/720 # meters per pixel in y dimension
     xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    y_eval = img.shape[0]
 
-    # Fit new polynomials to x,y in world space
-    left_fit_cr = np.polyfit(ploty*ym_per_pix, leftx*xm_per_pix, 2)
-    right_fit_cr = np.polyfit(ploty*ym_per_pix, rightx*xm_per_pix, 2)
+    # We are taking the top-down perspective x points from the polynomial fit
+    # and applying this meters-per-pixel offset. So what I need here are
+    # the left and right X pixels from the top-down perspective.
+
+    # Fit new polynomials to x,y in original camera perspective.
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
 
     # Calculate the new radii of curvature
     left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
@@ -227,3 +267,44 @@ def calculate_line_curvature():
     # Now our radius of curvature is in meters
     print(left_curverad, 'm', right_curverad, 'm')
     # Example values: 632.1 m    626.2 m
+
+
+
+def calculate_center_offset():
+    # Find centerpoint of lane lines
+
+    # Compare to center point of image.
+    car_center = midpoint
+
+
+
+def warp_back_to_original():
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(img).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+    global un_warped
+    # Warp the blank back to original camera perspective.
+    un_warped = warp.warp_from_top_down(color_warp)
+
+    plt.imshow(un_warped)
+    plt.show()
+
+
+
+
+def add_info_overlay():
+    # TODO how to overlay text in image?
+
+    # TODO overlay radius of curvature
+    # TODO overlay center offset
+    pass
+
