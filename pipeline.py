@@ -7,6 +7,7 @@ import lane_pixels
 import lane_find
 import cam_correct
 import warp
+import pprofile
 
 
 
@@ -26,9 +27,9 @@ def undistort_image(img):
 
 
 def undistort_movie():
-    clip = VideoFileClip('challenge_video.mp4')
+    clip = VideoFileClip('project_video.mp4')
     corrected = clip.fl_image(undistort_image)
-    corrected.write_videofile('challenge_corrected.mp4', audio=False)
+    corrected.write_videofile('project_corrected.mp4', audio=False)
 
 
 
@@ -46,7 +47,7 @@ def load_frame_at_time(time):
 
 
 def process_images(orig_img):
-    orig_img = cam_correct.undistort(orig_img, results)
+    # orig_img = cam_correct.undistort(orig_img, results)
     img = warp.warp_to_top_down(orig_img)
     img = lane_pixels.find(img)
     img = lane_find.process(img)
@@ -60,6 +61,8 @@ def process_images(orig_img):
 
 def do_it(input, output):
     clip = VideoFileClip(input)
+    clip.start = 20
+    clip.duration = 10
     processed = clip.fl_image(process_images)
     processed.write_videofile(output, audio=False)
 
@@ -68,7 +71,13 @@ def do_it(input, output):
 
 
 #cam_correct.undistort_single()
-#undistort_movie()
+# undistort_movie()
 #load_frame_at_time(16)
 #do_it(input='harder_challenge_video.mp4', output='pipeline_extra_challenge.mp4')
-do_it(input='project_video.mp4', output='project_pipeline2.mp4')
+prof = pprofile.Profile()
+with prof():
+    do_it(input='project_corrected.mp4', output='./temp_output/project_pipeline.mp4')
+# prof.print_stats()
+
+f = open('cachegrind.out', 'w')
+prof.callgrind(f)
