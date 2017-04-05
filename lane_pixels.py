@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import myplot
+import matplotlib as plt
 
 
 
@@ -71,15 +72,19 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, 180)):
 def find(image):
     # Choose a Sobel kernel size
     ksize = 11 # Choose a larger odd number to smooth gradient measurements
+    yCrCb = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
 
-    yel_bin = get_yellow_binary(image)
-    white_bin = get_white_binary(image)
-    combined = yel_bin | white_bin
+    yel_mask = get_yellow_mask_new(image)
+    white_mask = get_white_mask_new(image)
 
+    out_bin = np.zeros_like(image[:, :, 0])
+    out_bin[yel_mask | white_mask] = 1
+
+    # myplot.plot(out_bin)
     #myplot.plot_double(image, combined, 'original image', 'yellow+white binary image')
     #myplot.timed_plot_double(image, combined, 'original image', 'thresholded image')
 
-    return combined
+    return out_bin
 
 
 
@@ -121,6 +126,31 @@ def get_yellow_binary(image):
     yellow_bin[h_mask & s_mask] = 1
 
     return yellow_bin
+
+
+
+
+def get_yellow_mask_new(yCrCb):
+    cb_chan = yCrCb[:, :, 2]
+
+    max = np.max(cb_chan)
+    min = np.min(cb_chan)
+
+    range = max - min
+    bottom_percent = range * .03
+    thresh = min + bottom_percent
+
+    return cb_chan < thresh
+
+
+
+def get_white_mask_new(yCrCb):
+    y_chan = yCrCb[:, :, 0]
+
+    max_val = np.max(y_chan)
+    thresh = max_val * 0.9
+
+    return y_chan > thresh
 
 
 
