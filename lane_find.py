@@ -27,42 +27,49 @@ left_lane_idxs = None
 right_lane_idxs = None
 
 # Left and right line objects.
-left_line_obj = line.Line()
-right_line_obj = line.Line()
+left_line_obj = line.Line(True)
+right_line_obj = line.Line(False)
+
 
 
 
 # Number of windows to use over height of image for moving window lane finding.
 n_windows = 9
 # Set the width of the windows +/- margin
-margin = 100
+margin = 300
 # Set minimum number of pixels found to recenter window
 minpix = 50
-
-is_reset = True
 
 
 
 
 def process(in_img):
     global img
-
     img = in_img
+    pre_process()
 
-    if is_reset:
+    if not right_line_obj.detected:
         find_lines_initial()
         fit_curves()
         # plot_window_find_initial()
-        # TODO add binary points to final output image.
+        # print('doing initial search')
+
     else:
         find_lines_update()
         fit_curves()
         # plot_line_find_update()
 
     warp_back_to_original()
-
     return un_warped
 
+
+
+
+
+def pre_process():
+    # Dump all data in bottom pixels as there are reflections from the car hood.
+    global img
+    img[-50:-1, :] = 0
 
 
 
@@ -75,10 +82,10 @@ def find_lines_initial():
     global nonzero_y
     global midpoint
 
-    x_dim = img.shape[0]
+    x_dim = img.shape[1]
     midpoint = np.int(x_dim / 2)
 
-    histogram = np.sum(img[midpoint:,:], axis=0)
+    histogram = np.sum(img[int(midpoint/2):,:], axis=0)
 
     # Find the highest histogram count location for left and right halves of image.
     leftx_bottom = np.argmax(histogram[:midpoint])
@@ -188,9 +195,12 @@ def plot_window_find_initial():
     plt.xlim(0, 1280)
     plt.ylim(720, 0)
 
-    plt.show(block=False)
-    plt.pause(.00001)
-    plt.close()
+    if True:
+        plt.show(block=False)
+        plt.pause(.00001)
+        plt.close()
+    else:
+        plt.show()
 
 
 
@@ -203,8 +213,8 @@ def generate_plot_points():
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    left_fitx = left_fit[0] * ploty**2 + left_fit[1]*ploty + left_fit[2]
+    right_fitx = right_fit[0] * ploty**2 + right_fit[1]*ploty + right_fit[2]
 
 
 
@@ -239,9 +249,12 @@ def plot_line_find_update():
     plt.xlim(0, 1280)
     plt.ylim(720, 0)
 
-    plt.show(block=False)
-    plt.pause(.00001)
-    plt.close()
+    if True:
+        plt.show(block=False)
+        plt.pause(.00001)
+        plt.close()
+    else:
+        plt.show()
 
 
 
@@ -290,8 +303,8 @@ def add_info_overlay(img):
 def calculate_line_curvature():
     generate_plot_points()
     # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30/720 # meters per pixel in y dimension
-    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    ym_per_pix = 20/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/850 # meters per pixel in x dimension
     y_eval = img.shape[0]
 
     # We are taking the top-down perspective x points from the polynomial fit
@@ -307,10 +320,11 @@ def calculate_line_curvature():
     right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
     # Now our radius of curvature is in meters
 
-    left_line_obj.radius_of_curvature = left_curverad
-    right_line_obj.radius_of_curvature = right_curverad
+    left_line_obj.update_curvature(left_curverad)
+    right_line_obj.update_curvature(right_curverad)
 
-    return np.average([left_curverad, right_curverad])
+    return np.average([left_line_obj.get_curvatuve(),
+                       right_line_obj.get_curvatuve()])
     #print(left_curverad, 'm', right_curverad, 'm')
     # Example values: 632.1 m    626.2 m
 
@@ -321,16 +335,9 @@ def calculate_center_offset():
     # Find centerpoint of lane lines
     centerpoint = np.average([left_line_obj.get_x_pos(), right_line_obj.get_x_pos()])
 
-    # Compare to center point of image.
-    car_center = midpoint
-
     # Offset in pixels
     offset = centerpoint - midpoint
 
     # Apply conversion factor to get offset in meters
-    xm_per_pix = 3.7 / 1300
+    xm_per_pix = 3.7 / 850
     return offset * xm_per_pix
-
-
-
-

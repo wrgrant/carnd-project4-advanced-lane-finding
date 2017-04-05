@@ -4,6 +4,7 @@ import glob
 import matplotlib.pyplot as plt
 import argparse
 import pickle
+import myplot
 
 
 
@@ -65,6 +66,16 @@ def calculate_correction(image_path):
 # Undistorts an image using the previously saved parameters
 def undistort(img, results):
     return cv2.undistort(img, results['mtx'], results['dist'])
+
+
+
+
+def undistort_single():
+    f = open('results.p', 'rb')
+    results = pickle.load(f)
+    img = cv2.imread('./output_images/calibration1.jpg')
+    undist = cv2.undistort(img, results['mtx'], results['dist'])
+    myplot.plot_double(img, undist, 'original', 'undistorted')
 
 
 

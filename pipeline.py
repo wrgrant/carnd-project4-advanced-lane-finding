@@ -3,7 +3,7 @@ import pickle
 import myplot
 import cv2
 import numpy as np
-import threshold
+import lane_pixels
 import lane_find
 import cam_correct
 import warp
@@ -17,17 +17,17 @@ results = pickle.load(f)
 
 
 
-def process(img):
-    processed = cam_correct.undistort(img, results)
+def undistort_image(img):
+    undist = cam_correct.undistort(img, results)
     #myplot.plot_double(img, processed, 'original', 'undistorted')
-    return processed
+    return undist
 
 
 
 
 def undistort_movie():
     clip = VideoFileClip('challenge_video.mp4')
-    corrected = clip.fl_image(process)
+    corrected = clip.fl_image(undistort_image)
     corrected.write_videofile('challenge_corrected.mp4', audio=False)
 
 
@@ -37,20 +37,22 @@ def undistort_movie():
 def load_frame_at_time(time):
     clip = VideoFileClip('challenge_video.mp4')
     frame = clip.get_frame(time)
-    #warped = warp_to_top_down(frame)
+    undist = cam_correct.undistort(frame, results)
+    warped = warp.warp_to_top_down(frame)
     #myplot.plot(frame)
-    #myplot.plot_double(frame, warped)
+    # myplot.plot_double(frame, warped, 'original', 'top-down')
 
 
 
 
 def process_images(orig_img):
+    orig_img = cam_correct.undistort(orig_img, results)
     img = warp.warp_to_top_down(orig_img)
-    img = threshold.do_it(img)
+    img = lane_pixels.find(img)
     img = lane_find.process(img)
     img = cv2.addWeighted(orig_img, 1, img, 0.3, 0)
     img = lane_find.add_info_overlay(img)
-    myplot.timed_plot(img)
+    # myplot.timed_plot(img)
     return img
 
 
@@ -64,10 +66,9 @@ def do_it(input, output):
 
 
 
-# Algorithm...
+
+#cam_correct.undistort_single()
 #undistort_movie()
 #load_frame_at_time(16)
-do_it(input='harder_challenge_video.mp4', output='pipeline_extra_challenge.mp4')
-
-
-# Perspective transform
+#do_it(input='harder_challenge_video.mp4', output='pipeline_extra_challenge.mp4')
+do_it(input='project_video.mp4', output='project_pipeline2.mp4')
