@@ -52,13 +52,18 @@ def process(in_img, orig_img):
     if not right_line_obj.detected:
         find_lines_initial()
         fit_curves()
-        # plot_window_find_initial()
+        # print('reset')
+        plot_window_find_initial()
         # print('doing initial search')
 
     else:
         find_lines_update()
         fit_curves()
-        # plot_line_find_update()
+        plot_line_find_update()
+
+    #print('fit: {}'.format(right_line_obj.get_fit()))
+    print(right_line_obj.x_pos_buffer)
+
 
     out_img = overlay_binary_pixels(img, orig_img)
     out_img = overlay_line_fit(out_img)
@@ -160,6 +165,7 @@ def find_lines_update():
     nonzero_y = np.array(nonzero[0])
     nonzero_x = np.array(nonzero[1])
 
+    # Get the current fits
     left_fit = left_line_obj.get_fit()
     right_fit = right_line_obj.get_fit()
 
@@ -198,7 +204,7 @@ def plot_window_find_initial():
     plt.xlim(0, 1280)
     plt.ylim(720, 0)
 
-    if True:
+    if False:
         plt.show(block=False)
         plt.pause(.00001)
         plt.close()
@@ -252,12 +258,14 @@ def plot_line_find_update():
     plt.xlim(0, 1280)
     plt.ylim(720, 0)
 
-    if True:
+    if False:
         plt.show(block=False)
         plt.pause(.00001)
         plt.close()
     else:
         plt.show()
+
+
 
 
 # noinspection PyTypeChecker

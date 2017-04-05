@@ -7,6 +7,7 @@ class Line:
         # was the line detected in the last iteration?
         self.detected = False
         self.n_bad_frames = 0
+        self.n_good_frames = 0
         # x values of the last n fits of the line
         self.recent_xfitted = []
         #average x values of the fitted line over the last n iterations
@@ -28,9 +29,9 @@ class Line:
         self.is_print = is_print
 
         # Circular buffers to hold base x-position.
-        self.x_pos_buffer = collections.deque(maxlen=30)
-        self.c1_buffer = collections.deque(maxlen=30)
-        self.c2_buffer = collections.deque(maxlen=30)
+        self.x_pos_buffer = collections.deque(maxlen=10)
+        self.c1_buffer = collections.deque(maxlen=10)
+        self.c2_buffer = collections.deque(maxlen=10)
 
         self.reset_buffers()
 
@@ -47,18 +48,21 @@ class Line:
 
     def update(self, x_pts, y_pts):
         # Put this in a try-except so it will just not update if bad data comes in.
-        try:
-            fit = np.polyfit(y_pts, x_pts, 2)
+        if len(x_pts) == 0 or len(y_pts) == 0:
+            self.n_bad_frames += 1
+            if self.n_bad_frames > 10:
+                self.detected = False
+            return
 
-            # Add the coefficients to the circular buffers.
+        # At this point, arrays are not bad, so continue on.
+        fit = np.polyfit(y_pts, x_pts, 2)
+        # Add the coefficients to the circular buffers.
+        self.update_fit(fit)
+        self.n_bad_frames = 0
+        self.n_good_frames += 1
 
-            self.update_fit(fit)
-
-            if self.is_print:
-                hello = 1
-
-        except:
-            hello = 1
+        if self.is_print:
+            print('good frames: {}, bad frames: {}'.format(self.n_good_frames, self.n_bad_frames))
 
 
 
@@ -68,47 +72,27 @@ class Line:
         c2 = fit[1]
         x_pos = fit[2]
 
+        self.worker(self.x_pos_buffer, x_pos, 0.1)
+        self.worker(self.c1_buffer, c1, 0.5)
+        self.worker(self.c2_buffer, c2, 0.5)
+
         # if self.is_print:
         #     print(self.get_fit())
 
-        # If we're not detected just append whatever comes in.
-        if not self.detected:
-            self.x_pos_buffer.append(x_pos)
-
-        elif self.is_within_margin(x_pos, self.x_pos_buffer, 0.4):
-            # Get more picky when detected though.
-            self.x_pos_buffer.append(x_pos)
-        # else:
-        #     # If incoming value doesn't look within reasonable range,
-        #     # return, skipping setting other values as well.
-        #     self.n_bad_frames += 1
-        #     if self.n_bad_frames > 5:
-        #         self.detected = False
-        #         self.reset_buffers()
-        #     return
-
-
-        if not self.detected:
-            self.c1_buffer.append(c1)
-        elif self.is_within_margin(c1, self.c1_buffer, 1):
-            self.c1_buffer.append(c1)
-
-        if not self.detected:
-            self.c2_buffer.append(c2)
-
-        elif self.is_within_margin(c2, self.c2_buffer, 1):
-            self.c2_buffer.append(c2)
-
         # Once we build up the buffer, set detected to true and start being picky.
-        if len(self.x_pos_buffer) > 10:
+        if self.n_good_frames > 20:
             self.detected = True
 
-        # if self.n_bad_frames > 10:
-        #     self.detected = False
-        #     self.n_bad_frames = 0
 
 
+    def worker(self, buffer, value, margin):
+        if not self.detected:
+            # If we're not detected just append whatever comes in.
+            buffer.append(value)
 
+        elif self.is_within_margin(value, buffer, margin):
+            # Get more picky when detected though.
+            self.x_pos_buffer.append(value)
 
 
 
@@ -116,11 +100,6 @@ class Line:
     def is_within_margin(self, new, existing, margin):
         existing = np.abs(np.average(existing))
         new = np.abs(new)
-
-        # if (new > existing * (1+margin)) | (new < existing * (1-margin)):
-        #     return False
-        # else:
-        #     return True
 
         diff = np.abs((new - existing))
         rel_change = diff / existing
