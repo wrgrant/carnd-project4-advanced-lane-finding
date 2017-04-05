@@ -74,8 +74,8 @@ def find(image):
     ksize = 11 # Choose a larger odd number to smooth gradient measurements
     yCrCb = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
 
-    yel_mask = get_yellow_mask_new(image)
-    white_mask = get_white_mask_new(image)
+    yel_mask = get_yellow_mask(image)
+    white_mask = get_white_mask(image)
 
     out_bin = np.zeros_like(image[:, :, 0])
     out_bin[yel_mask | white_mask] = 1
@@ -89,48 +89,7 @@ def find(image):
 
 
 
-def get_white_binary(image):
-    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-    l_chan = hls[:, :, 1]
-    s_chan = hls[:, :, 2]
-
-    # White is basically high Lightness and low color Saturation
-    l_thresh = 200
-    l_mask = l_chan > l_thresh
-
-    s_mask = (s_chan < 50) | (s_chan > 220)
-
-    white_bin = np.zeros_like(l_chan)
-    white_bin[l_mask & s_mask] = 1
-
-    return white_bin
-
-
-
-
-def get_yellow_binary(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    h_chan = hsv[:, :, 0]
-    s_chan = hsv[:, :, 1]
-
-    # Define range for yellow in Hue channel. Remember these are 0-180 degrees.
-    h_thresh_low = 10
-    h_thresh_high = 26
-    h_mask = (h_chan > h_thresh_low) & (h_chan < h_thresh_high)
-
-    # Only want to look for high-saturation yellow though
-    s_thresh = 80
-    s_mask = s_chan > s_thresh
-
-    yellow_bin = np.zeros_like(h_chan)
-    yellow_bin[h_mask & s_mask] = 1
-
-    return yellow_bin
-
-
-
-
-def get_yellow_mask_new(yCrCb):
+def get_yellow_mask(yCrCb):
     cb_chan = yCrCb[:, :, 2]
 
     max = np.max(cb_chan)
@@ -144,26 +103,14 @@ def get_yellow_mask_new(yCrCb):
 
 
 
-def get_white_mask_new(yCrCb):
+
+def get_white_mask(yCrCb):
     y_chan = yCrCb[:, :, 0]
 
     max_val = np.max(y_chan)
     thresh = max_val * 0.9
 
     return y_chan > thresh
-
-
-
-
-def get_white_old(image):
-    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-
-    s_chan = hls[:, :, 2]
-
-    s_thresh = (15, 255)
-    s_bin = np.zeros_like(s_chan)
-    s_mask = (s_chan > s_thresh[0]) & (s_chan <= s_thresh[1])
-    return s_mask
 
 
 
