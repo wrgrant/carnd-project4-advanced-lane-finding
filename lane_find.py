@@ -3,6 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 import warp
 import line
+import myplot
 
 
 
@@ -43,7 +44,7 @@ minpix = 50
 
 
 
-def process(in_img):
+def process(in_img, orig_img):
     global img
     img = in_img
     pre_process()
@@ -59,8 +60,10 @@ def process(in_img):
         fit_curves()
         # plot_line_find_update()
 
-    warp_back_to_original()
-    return un_warped
+    out_img = overlay_binary_pixels(img, orig_img)
+    out_img = overlay_line_fit(out_img)
+    out_img = add_info_overlay(out_img)
+    return out_img
 
 
 
@@ -69,7 +72,7 @@ def process(in_img):
 def pre_process():
     # Dump all data in bottom pixels as there are reflections from the car hood.
     global img
-    img[-50:-1, :] = 0
+    img[-40:-1, :] = 0
 
 
 
@@ -257,49 +260,7 @@ def plot_line_find_update():
         plt.show()
 
 
-
-
-def warp_back_to_original():
-    generate_plot_points()
-    # Create an image to draw the lines on
-    warp_zero = np.zeros_like(img).astype(np.uint8)
-    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-
-    # Recast the x and y points into usable format for cv2.fillPoly()
-    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
-    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
-    pts = np.hstack((pts_left, pts_right))
-
-    # Draw the lane onto the warped blank image
-    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
-
-    global un_warped
-    # Warp the blank back to original camera perspective.
-    un_warped = warp.warp_from_top_down(color_warp)
-
-    # plt.imshow(un_warped)
-    # plt.show()
-
-
-
-
-def add_info_overlay(img):
-
-    curvature = calculate_line_curvature()
-    offset = calculate_center_offset()
-
-    color = (255, 255, 255)
-    str = 'radius of curvature {:.2f}m'.format(curvature)
-    cv2.putText(img, str, (20, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
-
-    str = 'center offset {:.2f}m'.format(offset)
-    cv2.putText(img, str, (20, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
-
-    return img
-
-
-
-
+# noinspection PyTypeChecker
 def calculate_line_curvature():
     generate_plot_points()
     # Define conversions in x and y from pixels space to meters
@@ -341,3 +302,68 @@ def calculate_center_offset():
     # Apply conversion factor to get offset in meters
     xm_per_pix = 3.7 / 850
     return offset * xm_per_pix
+
+
+
+
+def overlay_binary_pixels(binary, orig_img):
+    # Create an RGB image from the binary.
+    out_r = img * 1
+    out_g = img * 1
+    out_b = img * 255
+
+    binary = np.dstack((out_r, out_g, out_b))
+    binary_warped = warp.warp_from_top_down(binary)
+
+    new = replace_colors(binary_warped, orig_img)
+    return new
+
+
+
+
+def replace_colors(new, orig):
+    mask = np.nonzero(new)
+    orig[mask] = new[mask]
+
+    return orig
+
+
+
+
+def overlay_line_fit(orig_img):
+    generate_plot_points()
+
+    warp_zero = np.zeros_like(img).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+    # Warp the blank back to original camera perspective.
+    un_warped = warp.warp_from_top_down(color_warp)
+
+    # plt.imshow(un_warped)
+    # plt.show()
+
+    return cv2.addWeighted(orig_img, 1, un_warped, 0.7, 0)
+
+
+
+
+def add_info_overlay(out_img):
+    curvature = calculate_line_curvature()
+    offset = calculate_center_offset()
+
+    color = (255, 255, 255)
+    str = 'radius of curvature {:.2f}m'.format(curvature)
+    cv2.putText(out_img, str, (20, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+
+    str = 'center offset {:.2f}m'.format(offset)
+    cv2.putText(out_img, str, (20, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+
+    return out_img
