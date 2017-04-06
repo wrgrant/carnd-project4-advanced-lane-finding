@@ -18,8 +18,6 @@ class Line:
         self.current_fit = [np.array([False])]
         #radius of curvature of the line in some units
         self.radius_of_curvature = collections.deque(maxlen=10)
-        #distance in meters of vehicle center from the line
-        self.line_base_pos = None
         #difference in fit coefficients between last and new fits
         self.diffs = np.array([0,0,0], dtype='float')
         #x values for detected line pixels
@@ -29,9 +27,9 @@ class Line:
         self.is_print = is_print
 
         # Circular buffers to hold base x-position.
-        self.x_pos_buffer = collections.deque(maxlen=10)
-        self.c1_buffer = collections.deque(maxlen=10)
-        self.c2_buffer = collections.deque(maxlen=10)
+        self.x_pos_buffer = collections.deque(maxlen=50)
+        self.c1_buffer = collections.deque(maxlen=50)
+        self.c2_buffer = collections.deque(maxlen=50)
 
         self.reset_buffers()
 
@@ -47,22 +45,25 @@ class Line:
 
 
     def update(self, x_pts, y_pts):
-        # Put this in a try-except so it will just not update if bad data comes in.
+
+        if self.n_bad_frames > 10:
+            self.n_good_frames = 0
+            self.n_bad_frames = 0
+            self.detected = False
+
         if len(x_pts) == 0 or len(y_pts) == 0:
             self.n_bad_frames += 1
-            if self.n_bad_frames > 10:
-                self.detected = False
             return
 
         # At this point, arrays are not bad, so continue on.
         fit = np.polyfit(y_pts, x_pts, 2)
         # Add the coefficients to the circular buffers.
         self.update_fit(fit)
-        self.n_bad_frames = 0
+        # self.n_bad_frames = 0
         self.n_good_frames += 1
 
-        if self.is_print:
-            print('good frames: {}, bad frames: {}'.format(self.n_good_frames, self.n_bad_frames))
+        # if self.is_print:
+        #     print('good frames: {}, bad frames: {}'.format(self.n_good_frames, self.n_bad_frames))
 
 
 
@@ -72,9 +73,9 @@ class Line:
         c2 = fit[1]
         x_pos = fit[2]
 
-        self.worker(self.x_pos_buffer, x_pos, 0.1)
-        self.worker(self.c1_buffer, c1, 0.5)
-        self.worker(self.c2_buffer, c2, 0.5)
+        self.worker(self.x_pos_buffer, x_pos, 0.9, 'x')
+        self.worker(self.c1_buffer, c1, 0.5, 'c1')
+        self.worker(self.c2_buffer, c2, 0.5, 'c2')
 
         # if self.is_print:
         #     print(self.get_fit())
@@ -85,29 +86,35 @@ class Line:
 
 
 
-    def worker(self, buffer, value, margin):
+    def worker(self, buffer, value, margin, label):
         if not self.detected:
             # If we're not detected just append whatever comes in.
             buffer.append(value)
 
-        elif self.is_within_margin(value, buffer, margin):
+        elif self.is_within_margin(value, buffer, margin, label):
             # Get more picky when detected though.
-            self.x_pos_buffer.append(value)
+            buffer.append(value)
+        else:
+            self.n_bad_frames += 1
+            print('dropped' + label)
 
 
 
 
-    def is_within_margin(self, new, existing, margin):
+    def is_within_margin(self, new, existing, margin, label):
         existing = np.abs(np.average(existing))
         new = np.abs(new)
 
         diff = np.abs((new - existing))
-        rel_change = diff / existing
+        rel_change = diff / (1 + existing)
 
         if rel_change < margin:
             return True
         else:
+            if label is 'x':
+                hello = 1
             return False
+
 
 
 

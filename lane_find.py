@@ -37,7 +37,7 @@ right_line_obj = line.Line(False)
 # Number of windows to use over height of image for moving window lane finding.
 n_windows = 9
 # Set the width of the windows +/- margin
-margin = 300
+margin = 100
 # Set minimum number of pixels found to recenter window
 minpix = 50
 
@@ -52,17 +52,14 @@ def process(in_img, orig_img):
     if not right_line_obj.detected:
         find_lines_initial()
         fit_curves()
-        # print('reset')
-        plot_window_find_initial()
+        print('reset')
+        # plot_window_find_initial()
         # print('doing initial search')
 
     else:
         find_lines_update()
         fit_curves()
-        plot_line_find_update()
-
-    #print('fit: {}'.format(right_line_obj.get_fit()))
-    print(right_line_obj.x_pos_buffer)
+        # plot_line_find_update()
 
 
     out_img = overlay_binary_pixels(img, orig_img)
@@ -77,7 +74,7 @@ def process(in_img, orig_img):
 def pre_process():
     # Dump all data in bottom pixels as there are reflections from the car hood.
     global img
-    img[-40:-1, :] = 0
+    img[-20:-1, :] = 0
 
 
 
@@ -358,7 +355,7 @@ def overlay_line_fit(orig_img):
     # plt.imshow(un_warped)
     # plt.show()
 
-    return cv2.addWeighted(orig_img, 1, un_warped, 0.7, 0)
+    return cv2.addWeighted(orig_img, 1, un_warped, 0.2, 0)
 
 
 
@@ -367,11 +364,25 @@ def add_info_overlay(out_img):
     curvature = calculate_line_curvature()
     offset = calculate_center_offset()
 
-    color = (255, 255, 255)
+
     str = 'radius of curvature {:.2f}m'.format(curvature)
-    cv2.putText(out_img, str, (20, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+    add_text_helper(str, (20, 100), 2, 5, out_img)
 
     str = 'center offset {:.2f}m'.format(offset)
-    cv2.putText(out_img, str, (20, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 5)
+    add_text_helper(str, (20, 200), 2, 5, out_img)
+
+    fit = left_line_obj.get_fit()
+    str = 'L poly: {:.6f}  {:.4f}  {:.2f}'.format(fit[0], fit[1], fit[2])
+    add_text_helper(str, (20, 300), 1, 2, out_img)
+
+    fit = right_line_obj.get_fit()
+    str = 'R poly: {:.6f}  {:.4f}  {:.2f}'.format(fit[0], fit[1], fit[2])
+    add_text_helper(str, (20, 350), 1, 2, out_img)
 
     return out_img
+
+
+
+def add_text_helper(str, pos, size, thickness, img):
+    color = (255, 255, 255)
+    cv2.putText(img, str, pos, cv2.FONT_HERSHEY_SIMPLEX, size, color, thickness)
