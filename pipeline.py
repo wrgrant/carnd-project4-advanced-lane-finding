@@ -50,9 +50,12 @@ def load_frame_at_time(time):
 def process_images(orig_img):
     # orig_img = cam_correct.undistort(orig_img, results)
     img = warp.warp_to_top_down(orig_img)
-    img = lane_pixels.find(img)
-    img = lane_find.process(img, orig_img)
     # myplot.plot(img)
+    img = lane_pixels.find(img)
+
+    img = lane_find.process(img, orig_img)
+
+    # myplot.plot(orig_img)
     # myplot.timed_plot(img)
     return img
 
@@ -60,11 +63,12 @@ def process_images(orig_img):
 
 
 def do_it(input, output):
-    clip = VideoFileClip(input)
-    # clip.start = 45
-    # clip.duration = 10
-    processed = clip.fl_image(process_images)
-    processed.write_videofile(output, audio=False)
+    clip = VideoFileClip(input).subclip(t_start=21.5)
+    # clip = VideoFileClip(input)
+    clip = clip.set_duration(15, change_end=True)
+    clip = clip.fl_image(process_images)
+    clip.write_videofile(output, progress_bar=False)
+    # lane_find.extras()
 
 
 
@@ -77,7 +81,7 @@ def do_it(input, output):
 # prof = pprofile.Profile()
 # with prof():
 #
-do_it(input='project_corrected.mp4', output='./temp_output/project_pipeline8.mp4')
+do_it(input='project_corrected.mp4', output='./temp_output/project_pipeline10.mp4')
 # prof.print_stats()
 
 # f = open('cachegrind.out', 'w')

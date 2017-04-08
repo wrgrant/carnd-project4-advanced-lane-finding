@@ -70,12 +70,14 @@ def undistort(img, results):
 
 
 
-def undistort_single():
+def undistort_single(img):
     f = open('results.p', 'rb')
     results = pickle.load(f)
-    img = cv2.imread('./output_images/calibration1.jpg')
+    # img = cv2.imread('./test_images/straight_lines1.jpg')
     undist = cv2.undistort(img, results['mtx'], results['dist'])
-    myplot.plot_double(img, undist, 'original', 'undistorted')
+    return undist
+    # cv2.imwrite('./test_images/straight_lines1_corrected.jpg', img)
+    # myplot.plot_double(img, undist, 'original', 'undistorted')
 
 
 
