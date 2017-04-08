@@ -1,14 +1,9 @@
 from moviepy.editor import VideoFileClip
 import pickle
 import myplot
-import cv2
-import numpy as np
-import lane_pixels
 import lane_find
 import cam_correct
 import warp
-# import pprofile
-import matplotlib.pyplot as plt
 
 
 
@@ -47,16 +42,9 @@ def load_frame_at_time(time):
 
 
 
-def process_images(orig_img):
-    # orig_img = cam_correct.undistort(orig_img, results)
-    img = warp.warp_to_top_down(orig_img)
-    # myplot.plot(img)
-    img = lane_pixels.find(img)
-
-    img = lane_find.process(img, orig_img)
-
-    # myplot.plot(orig_img)
-    # myplot.timed_plot(img)
+def process_images(in_img):
+    warped = warp.warp_to_top_down(in_img)
+    img = lane_find.process(warped, in_img)
     return img
 
 
@@ -64,11 +52,10 @@ def process_images(orig_img):
 
 def do_it(input, output):
     clip = VideoFileClip(input).subclip(t_start=0)
-    # clip = VideoFileClip(input)
     # clip = clip.set_duration(15, change_end=True)
     clip = clip.fl_image(process_images)
-    clip.write_videofile(output, progress_bar=True)
-    # lane_find.extras()
+    clip.write_videofile(output, progress_bar=True, audio=False)
+
 
 
 
@@ -81,7 +68,7 @@ def do_it(input, output):
 # prof = pprofile.Profile()
 # with prof():
 #
-do_it(input='project_corrected.mp4', output='./temp_output/project_pipeline10.mp4')
+do_it(input='harder_challenge_video.mp4', output='./temp_output/harder_pipeline11.mp4')
 # prof.print_stats()
 
 # f = open('cachegrind.out', 'w')

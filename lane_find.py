@@ -4,19 +4,17 @@ import matplotlib.pyplot as plt
 import warp
 import line
 import myplot
+import lane_pixels
 
 
 
 
-# module variables -------------------
-
-# Incoming image  (warped to birds-eye and thresholded).
+# Incoming image  (warped to birds-eye and color pixels found).
 img = None
 # Image for temporary visualization during development.
 out_img = None
 # Final outgoing image with the color fill over the
 un_warped = None
-
 
 left_fit_x = None
 right_fit_x = None
@@ -44,23 +42,21 @@ minpix = 50
 
 
 
-def process(in_img, orig_img):
+def process(warped, orig_img):
     global img
-    img = in_img
+    img = lane_pixels.find_white_and_yellow(warped)
+
     pre_process()
 
     if not right_line_obj.detected:
         find_lines_initial()
         fit_curves()
-        # print('reset')
         # plot_window_find_initial()
-        # print('doing initial search')
 
     else:
         find_lines_update()
         fit_curves()
         # plot_line_find_update()
-
 
     out_img = overlay_binary_pixels(img, orig_img)
     out_img = overlay_line_fit(out_img)
@@ -70,11 +66,11 @@ def process(in_img, orig_img):
 
 
 
-
 def pre_process():
     # Dump all data in bottom pixels as there are reflections from the car hood.
     global img
     img[-20:-1, :] = 0
+
 
 
 
@@ -301,10 +297,10 @@ def calculate_line_curvature():
 
 def calculate_center_offset():
     # Find centerpoint of lane lines
-    centerpoint = np.average([left_line_obj.get_x_pos(), right_line_obj.get_x_pos()])
+    centerpoint = np.average([left_line_obj.eval_at_y_point(720), right_line_obj.eval_at_y_point(720)])
 
     # Offset in pixels
-    offset = centerpoint - midpoint
+    offset = midpoint - centerpoint
 
     # Apply conversion factor to get offset in meters
     xm_per_pix = 3.7 / 850

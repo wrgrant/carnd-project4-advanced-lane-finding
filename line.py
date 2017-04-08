@@ -62,11 +62,6 @@ class Line:
 
     def update(self, x_pts, y_pts):
 
-        if len(x_pts) == 0 or len(y_pts) == 0:
-            self.n_bad_frames += 1
-            self.this_frame_good = False
-            return
-
         if len(x_pts) < self.minpix:
             self.n_bad_frames += 1
             self.this_frame_good = False
@@ -78,10 +73,6 @@ class Line:
             self.n_bad_frames = 0
             self.detected = False
 
-
-
-
-
         # At this point, arrays are not bad, so continue on.
         fit = np.polyfit(y_pts, x_pts, 2)
         # Add the coefficients to the circular buffers.
@@ -89,9 +80,6 @@ class Line:
         # self.n_bad_frames = 0
         self.n_good_frames += 1
         self.this_frame_good = True
-
-        # if self.is_print:
-        #     print('good frames: {}, bad frames: {}'.format(self.n_good_frames, self.n_bad_frames))
 
 
 
@@ -101,56 +89,13 @@ class Line:
         c2 = fit[1]
         x_pos = fit[2]
 
+        self.x_pos_buffer.append(x_pos)
+        self.c1_buffer.append(c1)
+        self.c2_buffer.append(c2)
 
-        r1 = self.worker(self.x_pos_buffer, x_pos, 1, 'x')
-        r2 = self.worker(self.c1_buffer, c1, 10, 'c1')
-        r3 = self.worker(self.c2_buffer, c2, 10, 'c2')
-
-        if r1 and r2 and r3:
-            # If they are all thrown away, this is a bad frame!
-            self.n_bad_frames += 1
-        else:
-            # Once we build up the buffer, set detected to true and start being picky.
-            if self.n_good_frames > 20:
-                self.detected = True
-
-
-    #
-    # def worker(self, buffer, value, margin, label):
-    #     # if not self.detected:
-    #     #     # If we're not detected just append whatever comes in.
-    #     #     buffer.append(value)
-    #
-    #     if self.is_within_margin(value, buffer, margin, label):
-    #         # Get more picky when detected though.
-    #         buffer.append(value)
-    #         return False
-    #     else:
-    #         print(self.name + ' dropped ' + label + ' with rel_change={}'.format(self.rel_change))
-    #         return True
-
-    def worker(self, buffer, value, margin, label):
-        buffer.append(value)
-        return False
-
-
-
-
-    def is_within_margin(self, new, existing, margin, label):
-        # Return true if no existing data, as there is nothing to compare to.
-        if len(existing) == 0:
-            return True
-
-        existing = np.abs(np.average(existing))
-        new = np.abs(new)
-
-        diff = np.abs((new - existing))
-        rel_change = diff / existing
-
-        if rel_change < margin:
-            return True
-        else:
-            return False
+        # Once we build up the buffer, set detected to true.
+        if self.n_good_frames > 20:
+            self.detected = True
 
 
 
@@ -179,3 +124,13 @@ class Line:
 
     def get_curvature(self):
         return np.average(self.radius_of_curvature)
+
+
+
+
+    def eval_at_y_point(self, y=720):
+        c1 = np.average(self.c1_buffer)
+        c2 = np.average(self.c2_buffer)
+        c3 = np.average(self.x_pos_buffer)
+
+        return c1*(y**2) + c2*(y) + c3
