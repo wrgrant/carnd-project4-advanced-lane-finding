@@ -52,7 +52,6 @@ def process_images(in_img):
 
 def do_it(input, output):
     clip = VideoFileClip(input).subclip(t_start=0)
-    # clip = clip.set_duration(15, change_end=True)
     clip = clip.fl_image(process_images)
     clip.write_videofile(output, progress_bar=True, audio=False)
 
@@ -68,7 +67,7 @@ def do_it(input, output):
 # prof = pprofile.Profile()
 # with prof():
 #
-do_it(input='harder_challenge_video.mp4', output='./temp_output/harder_pipeline11.mp4')
+do_it(input='project_corrected.mp4', output='./temp_output/project_fixing_frame_bug.mp4')
 # prof.print_stats()
 
 # f = open('cachegrind.out', 'w')

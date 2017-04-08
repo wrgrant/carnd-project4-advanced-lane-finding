@@ -69,7 +69,7 @@ def process(warped, orig_img):
 def pre_process():
     # Dump all data in bottom pixels as there are reflections from the car hood.
     global img
-    img[-20:-1, :] = 0
+    img[-10:-1, :] = 0
 
 
 

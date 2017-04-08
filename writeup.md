@@ -150,6 +150,22 @@ Here is a link to my project pipeline video.
 
 [project video](./output_images/project_pipeline.mp4)
 
+Also, please take the following into consideration. I use a long field of view for the lane analysis (looking far down the lane). A consequence of this is that the lane curve can exit out the side of the analysis window for a tight curve, as happens in the project sample video from about t=30s onward. It may appear that my lane finding algorithm is not matching the far edge of the lane on the right side, but this is not the case (also to blame is the driver of this video for being so biased towards the left side of the lane!). The following images show what is causing that behavior.
+
+I cannot change this because doing so would require using a wider field of view at the far edge of the lane, which would force the warp to top-down view to become distorted such that the lines would appear to converge on each other. I also cannot make the view wider because I use the maximum width of the image at the bottom already in the warp to top-down
+
+This first image shows the matching of the pixels. Normally this would be in 'update' mode but I started analysis at this frame so it is showing 'window' search mode. A perfect fit is being applied to left and right (what can be seen) lines.
+
+![right](./output_images/right_fit.jpeg)
+
+This image shows that the green shaded region of interest follows the curve exactly as it should, but the frame is only so large and the tip of the right edge gets cut off.
+
+![right2](./output_images/right_shade.jpeg)
+
+This image is the un-warped version of the above image. Note the straight edge of the further-right side of the green outline. This is the chopped off portion of the above image being warped down. If the frame were not cut off, the curve would go right out to the edge of the detected line!
+
+![right3](./output_images/right_warped.jpeg)
+
 
 ---
 
