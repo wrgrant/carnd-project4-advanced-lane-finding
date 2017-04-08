@@ -87,7 +87,7 @@ def find(image):
 
     # myplot.plot(out_bin)
     # myplot.plot_double(yel_bin, yCrCb[:, :, 2], 'yellow detect - bottom percent', 'thresh={}'.format(yel_thresh))
-    myplot.plot_double(white_bin, yCrCb[:, :, 0], 'white detect - top percent', 'thresh={}'.format(white_thresh))
+    # myplot.plot_double(white_bin, yCrCb[:, :, 0], 'white detect - top percent', 'thresh={}'.format(white_thresh))
 
 
     #myplot.timed_plot_double(image, combined, 'original image', 'thresholded image')

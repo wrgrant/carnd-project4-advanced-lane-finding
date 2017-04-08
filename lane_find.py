@@ -28,8 +28,8 @@ left_lane_idxs = None
 right_lane_idxs = None
 
 # Left and right line objects.
-left_line_obj = line.Line(True)
-right_line_obj = line.Line(False)
+left_line_obj = line.Line(True, 'left')
+right_line_obj = line.Line(False, 'right')
 
 
 
@@ -52,7 +52,7 @@ def process(in_img, orig_img):
     if not right_line_obj.detected:
         find_lines_initial()
         fit_curves()
-        print('reset')
+        # print('reset')
         # plot_window_find_initial()
         # print('doing initial search')
 
@@ -178,6 +178,7 @@ def find_lines_update():
 
 def fit_curves():
     # Extract left and right line pixel positions and feed into line objects
+    # myplot.plot(img)
 
     leftx = nonzero_x[left_lane_idxs]
     lefty = nonzero_y[left_lane_idxs]
@@ -187,6 +188,9 @@ def fit_curves():
     righty = nonzero_y[right_lane_idxs]
     right_line_obj.update(rightx, righty)
 
+    # print('left fit: {}'.format(left_line_obj.get_fit()))
+    # print('right fit {}'.format(right_line_obj.get_fit()))
+
 
 
 
@@ -194,7 +198,7 @@ def plot_window_find_initial():
     generate_plot_points()
 
     out_img[nonzero_y[left_lane_idxs], nonzero_x[left_lane_idxs]] = [255, 0, 0]    # Left =red
-    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 0, 255]  # Right=blue
+    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 100, 255]  # Right=blue
     plt.imshow(out_img)
     plt.plot(left_fitx, ploty, color='yellow')
     plt.plot(right_fitx, ploty, color='yellow')
@@ -234,7 +238,7 @@ def plot_line_find_update():
     window_img = np.zeros_like(out_img)
     # Color in left and right line pixels
     out_img[nonzero_y[left_lane_idxs], nonzero_x[left_lane_idxs]] = [255, 0, 0]
-    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 0, 255]
+    out_img[nonzero_y[right_lane_idxs], nonzero_x[right_lane_idxs]] = [0, 100, 255]
 
     # Generate a polygon to illustrate the search window area
     # And recast the x and y points into usable format for cv2.fillPoly()
@@ -379,6 +383,12 @@ def add_info_overlay(out_img):
     str = 'R poly: {:.6f}  {:.4f}  {:.2f}'.format(fit[0], fit[1], fit[2])
     add_text_helper(str, (20, 350), 1, 2, out_img)
 
+    str = 'L good {}'.format(left_line_obj.this_frame_good)
+    add_text_helper(str, (20, 400), 1, 2, out_img)
+
+    str = 'R good {}'.format(right_line_obj.this_frame_good)
+    add_text_helper(str, (20, 450), 1, 2, out_img)
+
     return out_img
 
 
@@ -386,3 +396,11 @@ def add_info_overlay(out_img):
 def add_text_helper(str, pos, size, thickness, img):
     color = (255, 255, 255)
     cv2.putText(img, str, pos, cv2.FONT_HERSHEY_SIMPLEX, size, color, thickness)
+
+
+
+def extras():
+    plt.hist(left_line_obj.rel_change, range=(0, 1))
+    plt.show()
+    plt.hist(right_line_obj.rel_change)
+    plt.show()

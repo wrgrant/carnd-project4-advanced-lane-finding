@@ -63,11 +63,11 @@ def process_images(orig_img):
 
 
 def do_it(input, output):
-    clip = VideoFileClip(input).subclip(t_start=21.5)
+    clip = VideoFileClip(input).subclip(t_start=0)
     # clip = VideoFileClip(input)
-    clip = clip.set_duration(15, change_end=True)
+    # clip = clip.set_duration(15, change_end=True)
     clip = clip.fl_image(process_images)
-    clip.write_videofile(output, progress_bar=False)
+    clip.write_videofile(output, progress_bar=True)
     # lane_find.extras()
 
 
