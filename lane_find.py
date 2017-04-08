@@ -325,10 +325,11 @@ def overlay_binary_pixels(binary, orig_img):
 
 
 def replace_colors(new, orig):
+    out = np.copy(orig)
     mask = np.nonzero(new)
-    orig[mask] = new[mask]
+    out[mask] = new[mask]
 
-    return orig
+    return out
 
 
 
