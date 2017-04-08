@@ -45,9 +45,7 @@ class Line:
         #y values for detected line pixels
         self.ally = None
         self.is_print = is_print
-        # self.minpix = list()
         self.minpix = 500
-        self.rel_change = list()
         self.this_frame_good = False
 
         self.reset_buffers()
@@ -117,37 +115,27 @@ class Line:
                 self.detected = True
 
 
-
-    def worker(self, buffer, value, margin, label):
-        # if not self.detected:
-        #     # If we're not detected just append whatever comes in.
-        #     buffer.append(value)
-
-        if self.is_within_margin(value, buffer, margin, label):
-            # Get more picky when detected though.
-            buffer.append(value)
-            return False
-        else:
-            print(self.name + ' dropped ' + label + ' with rel_change={}'.format(self.rel_change))
-            return True
-
-
-
-
-
-    # def worker(self, buffer, value, margin, label):
-    #     if not self.detected:
-    #         # If we're not detected just append whatever comes in.
-    #         buffer.append(value)
     #
-    #     elif self.is_within_margin(value, buffer, margin, label):
+    # def worker(self, buffer, value, margin, label):
+    #     # if not self.detected:
+    #     #     # If we're not detected just append whatever comes in.
+    #     #     buffer.append(value)
+    #
+    #     if self.is_within_margin(value, buffer, margin, label):
     #         # Get more picky when detected though.
     #         buffer.append(value)
+    #         return False
     #     else:
-    #         self.n_bad_frames += 1
-    #         print('dropped' + label)
+    #         print(self.name + ' dropped ' + label + ' with rel_change={}'.format(self.rel_change))
+    #         return True
 
-    # todo search within
+    def worker(self, buffer, value, margin, label):
+        buffer.append(value)
+        return False
+
+
+
+
     def is_within_margin(self, new, existing, margin, label):
         # Return true if no existing data, as there is nothing to compare to.
         if len(existing) == 0:
@@ -158,10 +146,6 @@ class Line:
 
         diff = np.abs((new - existing))
         rel_change = diff / existing
-
-        # if label is 'c1':
-        #     self.rel_change.append(rel_change)
-        self.rel_change = rel_change
 
         if rel_change < margin:
             return True
@@ -193,5 +177,5 @@ class Line:
 
 
 
-    def get_curvatuve(self):
+    def get_curvature(self):
         return np.average(self.radius_of_curvature)

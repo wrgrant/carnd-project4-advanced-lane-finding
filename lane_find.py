@@ -273,7 +273,7 @@ def plot_line_find_update():
 def calculate_line_curvature():
     generate_plot_points()
     # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 20/720 # meters per pixel in y dimension
+    ym_per_pix = 30/720 # meters per pixel in y dimension
     xm_per_pix = 3.7/850 # meters per pixel in x dimension
     y_eval = img.shape[0]
 
@@ -293,10 +293,8 @@ def calculate_line_curvature():
     left_line_obj.update_curvature(left_curverad)
     right_line_obj.update_curvature(right_curverad)
 
-    return np.average([left_line_obj.get_curvatuve(),
-                       right_line_obj.get_curvatuve()])
-    #print(left_curverad, 'm', right_curverad, 'm')
-    # Example values: 632.1 m    626.2 m
+    return np.average([left_line_obj.get_curvature(),
+                       right_line_obj.get_curvature()])
 
 
 
@@ -356,9 +354,6 @@ def overlay_line_fit(orig_img):
     # Warp the blank back to original camera perspective.
     un_warped = warp.warp_from_top_down(color_warp)
 
-    # plt.imshow(un_warped)
-    # plt.show()
-
     return cv2.addWeighted(orig_img, 1, un_warped, 0.2, 0)
 
 
@@ -367,7 +362,6 @@ def overlay_line_fit(orig_img):
 def add_info_overlay(out_img):
     curvature = calculate_line_curvature()
     offset = calculate_center_offset()
-
 
     str = 'radius of curvature {:.2f}m'.format(curvature)
     add_text_helper(str, (20, 100), 2, 5, out_img)
@@ -382,12 +376,12 @@ def add_info_overlay(out_img):
     fit = right_line_obj.get_fit()
     str = 'R poly: {:.6f}  {:.4f}  {:.2f}'.format(fit[0], fit[1], fit[2])
     add_text_helper(str, (20, 350), 1, 2, out_img)
-
-    str = 'L good {}'.format(left_line_obj.this_frame_good)
-    add_text_helper(str, (20, 400), 1, 2, out_img)
-
-    str = 'R good {}'.format(right_line_obj.this_frame_good)
-    add_text_helper(str, (20, 450), 1, 2, out_img)
+    #
+    # str = 'L good {}'.format(left_line_obj.this_frame_good)
+    # add_text_helper(str, (20, 400), 1, 2, out_img)
+    #
+    # str = 'R good {}'.format(right_line_obj.this_frame_good)
+    # add_text_helper(str, (20, 450), 1, 2, out_img)
 
     return out_img
 
@@ -396,11 +390,3 @@ def add_info_overlay(out_img):
 def add_text_helper(str, pos, size, thickness, img):
     color = (255, 255, 255)
     cv2.putText(img, str, pos, cv2.FONT_HERSHEY_SIMPLEX, size, color, thickness)
-
-
-
-def extras():
-    plt.hist(left_line_obj.rel_change, range=(0, 1))
-    plt.show()
-    plt.hist(right_line_obj.rel_change)
-    plt.show()
