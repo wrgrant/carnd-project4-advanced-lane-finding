@@ -146,7 +146,7 @@ I also replace the color-detected pixels with blue as part of this step in the f
 
 #### Final video output. 
 
-I tackled the challenge video as well. I actually started with that one accidentally. Strangely enough, that one appeared to be easier than the actual project video.
+Here is a link to my project pipeline video.
 
 [project video](./output_images/project_pipeline.mp4)
 
